@@ -57,6 +57,12 @@ const userSchema = new mongoose.Schema({
     maxlength: [300, 'La bio no puede superar los 300 caracteres'],
     default: ''
   },
+  // Key personal de FreeTheAI para el chatbot; si no la define el usuario, el
+  // controller usa la key compartida (limitada a 10 req/min en el tier free).
+  freethaiApiKey: {
+    type: String,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now

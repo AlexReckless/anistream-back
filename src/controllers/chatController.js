@@ -180,6 +180,10 @@ const sendMessage = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Personaje no encontrado. Inicia el chat primero.' });
     }
 
+    // Cada usuario puede poner su propia key de FreeTheAI (evita el límite de
+    // 10 req/min del tier gratis cuando varios usan el chatbot a la vez).
+    const apiKey = req.user.freethaiApiKey || FREETHAI_API_KEY;
+
     // Construir historial para la API (últimos 20 mensajes para no exceder tokens)
     const systemPrompt = buildSystemPrompt(chat);
     const history = chat.messages.slice(-20).map(m => ({
@@ -208,7 +212,7 @@ const sendMessage = async (req, res) => {
       },
       {
         headers: {
-          'Authorization': `Bearer ${FREETHAI_API_KEY}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         timeout: 45000,
@@ -316,6 +320,8 @@ const updateSummary = async (req, res) => {
       return res.json({ success: true, message: 'Muy pocos mensajes para resumir.' });
     }
 
+    const apiKey = req.user.freethaiApiKey || FREETHAI_API_KEY;
+
     const historyText = chat.messages.slice(-30).map(m => `${m.role}: ${m.content}`).join('\n');
     
     const summarizePrompt = `Eres un sistema de memoria para una IA de rol. Tu tarea es actualizar el resumen de la relación entre el usuario y ${chat.characterName}. 
@@ -331,7 +337,7 @@ Genera el nuevo resumen consolidado (máx 150 palabras). Sé directo.`;
       model: MODEL,
       messages: [{ role: 'system', content: summarizePrompt }],
       max_tokens: 300,
-    }, { headers: { 'Authorization': `Bearer ${FREETHAI_API_KEY}` } });
+    }, { headers: { 'Authorization': `Bearer ${apiKey}` } });
 
     chat.summary = response.data?.choices?.[0]?.message?.content || chat.summary;
     await chat.save();

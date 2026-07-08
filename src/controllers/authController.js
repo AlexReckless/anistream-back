@@ -267,7 +267,7 @@ const getProfile = async (req, res) => {
 // @access  Private
 const updateProfile = async (req, res) => {
   try {
-    const { name, bio, avatarBase64, bannerBase64 } = req.body;
+    const { name, bio, avatarBase64, bannerBase64, freethaiApiKey } = req.body;
 
     const user = await User.findById(req.user.id);
     if (!user) {
@@ -278,6 +278,9 @@ const updateProfile = async (req, res) => {
     if (typeof bio === 'string') user.bio = bio.slice(0, 300);
     if (typeof avatarBase64 === 'string') user.avatarBase64 = avatarBase64;
     if (typeof bannerBase64 === 'string') user.bannerBase64 = bannerBase64;
+    // string vacio o null = volver a usar la key compartida del chatbot
+    if (typeof freethaiApiKey === 'string') user.freethaiApiKey = freethaiApiKey.trim() || null;
+    else if (freethaiApiKey === null) user.freethaiApiKey = null;
 
     await user.save();
 

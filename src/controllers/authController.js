@@ -1,5 +1,6 @@
 //authController.js
 const User = require('../models/User');
+const Friendship = require('../models/Friendship');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
@@ -261,11 +262,72 @@ const getProfile = async (req, res) => {
   }
 };
 
+// @desc    Actualizar perfil de usuario (nombre, bio, avatar, banner)
+// @route   PATCH /api/auth/profile
+// @access  Private
+const updateProfile = async (req, res) => {
+  try {
+    const { name, bio, avatarBase64, bannerBase64 } = req.body;
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    if (typeof name === 'string' && name.trim()) user.name = name.trim();
+    if (typeof bio === 'string') user.bio = bio.slice(0, 300);
+    if (typeof avatarBase64 === 'string') user.avatarBase64 = avatarBase64;
+    if (typeof bannerBase64 === 'string') user.bannerBase64 = bannerBase64;
+
+    await user.save();
+
+    const { password, securityQuestions, ...safeUser } = user.toObject();
+
+    res.json({ success: true, user: safeUser });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Obtener perfil publico de otro usuario (uno mismo o un amigo aceptado)
+// @route   GET /api/auth/profile/:userId
+// @access  Private
+const getUserProfileById = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (userId !== req.user.id) {
+      const friendship = await Friendship.findOne({
+        status: 'accepted',
+        $or: [
+          { requester: req.user.id, recipient: userId },
+          { requester: userId, recipient: req.user.id }
+        ]
+      });
+
+      if (!friendship) {
+        return res.status(403).json({ success: false, message: 'Solo puedes ver el perfil de tus amigos' });
+      }
+    }
+
+    const user = await User.findById(userId).select('name user avatarBase64 bannerBase64 bio createdAt');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   getSecurityQuestions,
   verifySecurityAnswers,
   resetPassword,
-  getProfile
+  getProfile,
+  updateProfile,
+  getUserProfileById
 };

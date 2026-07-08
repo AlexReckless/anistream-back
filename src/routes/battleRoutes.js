@@ -1,0 +1,18 @@
+const express = require('express');
+const router = express.Router();
+const { protect } = require('../middleware/authMiddleware');
+const {
+  createBattle,
+  getIncomingBattles,
+  getOutgoingBattles,
+  rollBattle
+} = require('../controllers/battleController');
+
+router.use(protect);
+
+router.post('/', createBattle);
+router.get('/incoming', getIncomingBattles);
+router.get('/outgoing', getOutgoingBattles);
+router.patch('/:id/roll', rollBattle);
+
+module.exports = router;

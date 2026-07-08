@@ -10,6 +10,10 @@ const chatRoutes = require('./routes/chatRoutes');
 const commentRoutes = require('./routes/commentRoutes');
 const friendRoutes = require('./routes/friendRoutes');
 const streakRoutes = require('./routes/streakRoutes');
+const cardRoutes = require('./routes/cardRoutes');
+const tradeRoutes = require('./routes/tradeRoutes');
+const battleRoutes = require('./routes/battleRoutes');
+const mangaRoutes = require('./routes/mangaRoutes');
 
 
 // Cargar variables de entorno
@@ -22,8 +26,8 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Rutas
 app.use('/api/auth', authRoutes);
@@ -32,6 +36,10 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/friends', friendRoutes);
 app.use('/api/streaks', streakRoutes);
+app.use('/api/cards', cardRoutes);
+app.use('/api/trades', tradeRoutes);
+app.use('/api/battles', battleRoutes);
+app.use('/api/manga', mangaRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {

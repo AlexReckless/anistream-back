@@ -223,9 +223,14 @@ const sendMessage = async (req, res) => {
     chat.lastChatAt = new Date();
     await chat.save();
 
+    const userMsgDoc = chat.messages[chat.messages.length - 2];
+    const aiMsgDoc = chat.messages[chat.messages.length - 1];
+
     res.json({
       success: true,
       reply: assistantContent,
+      userMessageId: userMsgDoc._id,
+      messageId: aiMsgDoc._id,
       messageCount: chat.messages.length,
     });
   } catch (err) {
@@ -254,15 +259,47 @@ const saveConversation = async (req, res) => {
 const togglePinMessage = async (req, res) => {
   try {
     const { characterId, messageId } = req.body;
+    if (!characterId || !messageId) {
+      return res.status(400).json({ success: false, message: 'characterId y messageId son requeridos' });
+    }
+
     const chat = await CharacterChat.findOne({ userId: req.user.id, characterId });
     if (!chat) return res.status(404).json({ success: false, message: 'Chat no encontrado' });
 
-    const message = chat.messages.id(messageId);
-    if (!message) return res.status(404).json({ success: false, message: 'Mensaje no encontrado' });
+    let message;
+    try {
+      message = chat.messages.id(messageId);
+    } catch {
+      message = null;
+    }
+    if (!message) return res.status(404).json({ success: false, message: 'Mensaje no encontrado. Intenta recargar la conversación.' });
 
     message.isPinned = !message.isPinned;
     await chat.save();
     res.json({ success: true, isPinned: message.isPinned });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ─── DELETE /api/chat/message/:characterId/:messageId — eliminar un mensaje ──
+const deleteMessage = async (req, res) => {
+  try {
+    const { characterId, messageId } = req.params;
+    const chat = await CharacterChat.findOne({ userId: req.user.id, characterId });
+    if (!chat) return res.status(404).json({ success: false, message: 'Chat no encontrado' });
+
+    let message;
+    try {
+      message = chat.messages.id(messageId);
+    } catch {
+      message = null;
+    }
+    if (!message) return res.status(404).json({ success: false, message: 'Mensaje no encontrado. Intenta recargar la conversación.' });
+
+    chat.messages.pull({ _id: messageId });
+    await chat.save();
+    res.json({ success: true, message: 'Mensaje eliminado', messageCount: chat.messages.length });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -393,5 +430,6 @@ module.exports = {
   rateCharacter,
   listChats,
   togglePinMessage,
-  updateSummary
+  updateSummary,
+  deleteMessage,
 };

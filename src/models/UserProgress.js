@@ -45,6 +45,10 @@ const userProgressSchema = new mongoose.Schema({
   lastUpdated: {
     type: Date,
     default: Date.now
+  },
+  cardsMigrated: {
+    type: Boolean,
+    default: false
   }
 });
 

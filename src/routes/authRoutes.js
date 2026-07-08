@@ -7,7 +7,9 @@ const {
   getSecurityQuestions,
   verifySecurityAnswers,
   resetPassword,
-  getProfile
+  getProfile,
+  updateProfile,
+  getUserProfileById
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -20,5 +22,7 @@ router.post('/reset-password', resetPassword);
 
 // Rutas protegidas
 router.get('/profile', protect, getProfile);
+router.patch('/profile', protect, updateProfile);
+router.get('/profile/:userId', protect, getUserProfileById);
 
 module.exports = router;

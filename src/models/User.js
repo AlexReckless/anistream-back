@@ -50,6 +50,13 @@ const userSchema = new mongoose.Schema({
   securityQuestions: [securityQuestionSchema],
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  avatarBase64: String,
+  bannerBase64: String,
+  bio: {
+    type: String,
+    maxlength: [300, 'La bio no puede superar los 300 caracteres'],
+    default: ''
+  },
   createdAt: {
     type: Date,
     default: Date.now

@@ -1,6 +1,7 @@
 //progressController.js
 const UserProgress = require('../models/UserProgress');
 const Transaction = require('../models/Transaction');
+const Card = require('../models/Card');
 
 // @desc    Obtener o crear progreso del usuario
 // @route   GET /api/progress
@@ -281,7 +282,22 @@ const addCharacterToCollection = async (req, res) => {
     };
     
     await progress.addCharacterToCollection(enrichedCharacter);
-    
+
+    // Crear también una instancia individual de Card (transferible en trades/combates)
+    await Card.create({
+      ownerId: req.user.id,
+      characterId: String(enrichedCharacter.id),
+      characterName: enrichedCharacter.name,
+      image: enrichedCharacter.image,
+      anime: enrichedCharacter.anime,
+      rarity: enrichedCharacter.rarity,
+      favorites: enrichedCharacter.favorites,
+      synopsis: enrichedCharacter.synopsis,
+      source: enrichedCharacter.source,
+      isOriginal: enrichedCharacter.rarity === 'OR',
+      obtainedAt: enrichedCharacter.obtainedAt
+    });
+
     // Registrar transacción
     await Transaction.create({
       userId: req.user.id,

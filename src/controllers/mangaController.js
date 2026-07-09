@@ -1,6 +1,14 @@
 // mangaController.js — favoritos e historial de lectura de manga
 const MangaProgress = require('../models/MangaProgress');
 
+// Fuentes que ya no existen en anime1v-api-main (se sacaron por bloqueo de
+// Cloudflare). Los registros viejos de usuarios que las usaron antes de sacarlas
+// se quedan huerfanos en Mongo para siempre si no se filtran aca: el front
+// intenta abrir la obra con ese "source" y el backend de manga responde 400
+// "Fuente de manga desconocida", pareciendo que la app "quiere abrir ZonaTMO".
+const DEAD_SOURCES = new Set(['zonatmo', 'kingcomix']);
+const isLiveSource = (entry) => !DEAD_SOURCES.has(entry.source);
+
 async function getOrCreate(userId) {
   let progress = await MangaProgress.findOne({ userId });
   if (!progress) {
@@ -14,7 +22,7 @@ async function getOrCreate(userId) {
 const getFavorites = async (req, res) => {
   try {
     const progress = await getOrCreate(req.user.id);
-    res.json({ success: true, data: progress.favorites });
+    res.json({ success: true, data: progress.favorites.filter(isLiveSource) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -55,7 +63,7 @@ const getHistory = async (req, res) => {
     const progress = await getOrCreate(req.user.id);
 
     const byManga = new Map();
-    for (const entry of progress.readChapters) {
+    for (const entry of progress.readChapters.filter(isLiveSource)) {
       const key = `${entry.source}_${entry.mangaId}`;
       const existing = byManga.get(key);
       if (!existing || new Date(entry.readAt) > new Date(existing.readAt)) {
@@ -113,6 +121,7 @@ const getReadChapters = async (req, res) => {
     const { source, mangaId } = req.params;
     const progress = await getOrCreate(req.user.id);
     const chapterIds = progress.readChapters
+      .filter(isLiveSource)
       .filter((c) => c.source === source && c.mangaId === mangaId)
       .map((c) => c.chapterId);
     res.json({ success: true, data: chapterIds });

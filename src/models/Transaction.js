@@ -18,7 +18,7 @@ const transactionSchema = new mongoose.Schema({
   },
   reason: {
     type: String,
-    enum: ['watch_episode', 'daily_bonus', 'purchase_character', 'gacha', 'other'],
+    enum: ['watch_episode', 'daily_bonus', 'purchase_character', 'gacha', 'admin_adjustment', 'other'],
     required: true
   },
   metadata: {

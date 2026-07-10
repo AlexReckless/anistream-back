@@ -65,15 +65,16 @@ userProgressSchema.methods.isEpisodeWatched = function(animeId, episodeNumber) {
   );
 };
 
-// Método para marcar episodio como visto
-userProgressSchema.methods.markEpisodeAsWatched = async function(animeId, episodeNumber) {
+// Método para marcar episodio como visto. pointsAward lo decide el llamador
+// (el controller lo trae de Settings.pointsPerEpisode, configurable por el admin).
+userProgressSchema.methods.markEpisodeAsWatched = async function(animeId, episodeNumber, pointsAward = 5) {
   if (!this.isEpisodeWatched(animeId, episodeNumber)) {
     this.watchedEpisodes.push({
       animeId,
       episodeNumber,
       watchedAt: new Date()
     });
-    this.points += 5;
+    this.points += pointsAward;
     this.lastUpdated = new Date();
     await this.save();
     return { success: true, points: this.points };

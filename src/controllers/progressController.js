@@ -2,6 +2,7 @@
 const UserProgress = require('../models/UserProgress');
 const Transaction = require('../models/Transaction');
 const Card = require('../models/Card');
+const Settings = require('../models/Settings');
 
 // @desc    Obtener o crear progreso del usuario
 // @route   GET /api/progress
@@ -61,14 +62,15 @@ const markEpisodeAsWatched = async (req, res) => {
       });
     }
     
-    const result = await progress.markEpisodeAsWatched(animeId, episodeNumber);
-    
+    const settings = await Settings.getOrCreate();
+    const result = await progress.markEpisodeAsWatched(animeId, episodeNumber, settings.pointsPerEpisode);
+
     if (result.success) {
       // Registrar transacción
       await Transaction.create({
         userId: req.user.id,
         type: 'earn',
-        amount: 5,
+        amount: settings.pointsPerEpisode,
         reason: 'watch_episode',
         metadata: { animeId, episodeNumber }
       });

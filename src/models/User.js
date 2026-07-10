@@ -63,6 +63,12 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  // Un solo usuario admin en toda la app; no hay UI para poner este flag en
+  // true, se hace a mano en Mongo Atlas una vez.
+  isAdmin: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now

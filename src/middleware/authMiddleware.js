@@ -35,4 +35,17 @@ const protect = async (req, res, next) => {
   });
 };
 
-module.exports = { protect };
+// Usar siempre despues de "protect" -- ese middleware ya deja el User
+// completo (menos password) en req.user, asi que isAdmin ya esta disponible
+// sin otra consulta a la base.
+const requireAdmin = (req, res, next) => {
+  if (!req.user?.isAdmin) {
+    return res.status(403).json({
+      success: false,
+      message: 'Solo el administrador puede hacer esto'
+    });
+  }
+  next();
+};
+
+module.exports = { protect, requireAdmin };

@@ -15,6 +15,7 @@ const tradeRoutes = require('./routes/tradeRoutes');
 const battleRoutes = require('./routes/battleRoutes');
 const mangaRoutes = require('./routes/mangaRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const bannerRoutes = require('./routes/bannerRoutes');
 
 
 // Cargar variables de entorno
@@ -42,6 +43,7 @@ app.use('/api/trades', tradeRoutes);
 app.use('/api/battles', battleRoutes);
 app.use('/api/manga', mangaRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/banner', bannerRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {

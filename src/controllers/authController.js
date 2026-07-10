@@ -109,7 +109,8 @@ const loginUser = async (req, res) => {
         id: foundUser._id,
         name: foundUser.name,
         user: foundUser.user,
-        email: foundUser.email
+        email: foundUser.email,
+        isAdmin: foundUser.isAdmin
       }
     });
   } catch (error) {

@@ -1,6 +1,7 @@
 //authController.js
 const User = require('../models/User');
 const Friendship = require('../models/Friendship');
+const UserProgress = require('../models/UserProgress');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
@@ -251,9 +252,10 @@ const resetPassword = async (req, res) => {
 const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password -securityQuestions');
+    const progress = await UserProgress.findOne({ userId: req.user.id }).select('watchedEpisodes');
     res.json({
       success: true,
-      user
+      user: { ...user.toObject(), watchedEpisodesCount: progress?.watchedEpisodes?.length || 0 }
     });
   } catch (error) {
     res.status(500).json({
@@ -319,7 +321,17 @@ const getUserProfileById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
     }
 
-    res.json({ success: true, user });
+    const progress = await UserProgress.findOne({ userId }).select('watchedEpisodes milestone50Seen');
+    const watchedEpisodesCount = progress?.watchedEpisodes?.length || 0;
+
+    // El admin visitando el perfil de otro usuario "atiende" el aviso de
+    // hito de 50 capitulos -- por eso el badge desaparece recien al entrar.
+    if (req.user.isAdmin && userId !== req.user.id && progress && !progress.milestone50Seen) {
+      progress.milestone50Seen = true;
+      await progress.save();
+    }
+
+    res.json({ success: true, user: { ...user.toObject(), watchedEpisodesCount } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

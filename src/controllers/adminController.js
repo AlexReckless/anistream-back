@@ -5,6 +5,8 @@ const Transaction = require('../models/Transaction');
 const Card = require('../models/Card');
 const User = require('../models/User');
 
+const EPISODE_MILESTONE = 50;
+
 // @desc    Ver configuracion global (puntos por capitulo, etc)
 // @route   GET /api/admin/settings
 // @access  Private (admin)
@@ -121,4 +123,20 @@ const giftCard = async (req, res) => {
   }
 };
 
-module.exports = { getSettings, updateSettings, getUserPoints, setUserPoints, giftCard };
+// @desc    Cuántos usuarios llegaron a 50+ capítulos vistos y el admin
+//          todavía no visitó su perfil (para el globito de notificaciones)
+// @route   GET /api/admin/episode-milestones
+// @access  Private (admin)
+const getEpisodeMilestones = async (req, res) => {
+  try {
+    const count = await UserProgress.countDocuments({
+      milestone50Seen: { $ne: true },
+      $expr: { $gte: [{ $size: '$watchedEpisodes' }, EPISODE_MILESTONE] }
+    });
+    res.json({ success: true, count });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { getSettings, updateSettings, getUserPoints, setUserPoints, giftCard, getEpisodeMilestones };

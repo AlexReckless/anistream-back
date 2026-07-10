@@ -49,6 +49,13 @@ const userProgressSchema = new mongoose.Schema({
   cardsMigrated: {
     type: Boolean,
     default: false
+  },
+  // Se pone en true cuando el admin visita el perfil de este usuario despues
+  // de que llego a 50 capitulos vistos -- asi la notificacion del admin
+  // desaparece hasta el proximo hito (ver authController.getUserProfileById).
+  milestone50Seen: {
+    type: Boolean,
+    default: false
   }
 });
 

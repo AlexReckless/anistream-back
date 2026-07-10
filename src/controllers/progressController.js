@@ -257,7 +257,17 @@ const addCharacterToCollection = async (req, res) => {
         message: 'Datos del personaje inválidos'
       });
     }
-    
+
+    // DIAMOND SSR SPECIAL solo la puede crear el admin (Talk Original la
+    // oculta para todos los demás, pero esto es lo que lo hace real: sin
+    // este chequeo cualquiera podria forjar una llamando al endpoint directo).
+    if (character.rarity === 'DIAMOND_SSR_SPECIAL' && !req.user.isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Solo el administrador puede crear cartas DIAMOND SSR SPECIAL'
+      });
+    }
+
     let progress = await UserProgress.findOne({ userId: req.user.id });
     
     if (!progress) {
@@ -296,7 +306,7 @@ const addCharacterToCollection = async (req, res) => {
       favorites: enrichedCharacter.favorites,
       synopsis: enrichedCharacter.synopsis,
       source: enrichedCharacter.source,
-      isOriginal: enrichedCharacter.rarity === 'OR',
+      isOriginal: ['OR', 'DIAMOND_SSR_SPECIAL'].includes(enrichedCharacter.rarity),
       obtainedAt: enrichedCharacter.obtainedAt
     });
 

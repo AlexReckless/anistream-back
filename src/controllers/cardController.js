@@ -139,3 +139,39 @@ exports.cloneCard = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Regalar una carta de la PROPIA colección del admin a otro usuario
+//          (transferencia de dueño, no clon -- el admin la pierde)
+// @route   POST /api/cards/:cardId/gift
+// @access  Private (admin)
+exports.giftOwnCard = async (req, res) => {
+  try {
+    const { cardId } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: 'userId es requerido' });
+    }
+
+    const card = await Card.findById(cardId);
+    if (!card) {
+      return res.status(404).json({ success: false, message: 'Carta no encontrada' });
+    }
+    if (card.ownerId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Solo podés regalar cartas de tu propia colección' });
+    }
+
+    const target = await User.findById(userId).select('_id');
+    if (!target) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    card.ownerId = userId;
+    card.locked = false;
+    await card.save();
+
+    res.json({ success: true, data: card });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

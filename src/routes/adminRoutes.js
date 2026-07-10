@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect, requireAdmin } = require('../middleware/authMiddleware');
-const { getSettings, updateSettings, getUserPoints, setUserPoints, giftCard } = require('../controllers/adminController');
+const { getSettings, updateSettings, getUserPoints, setUserPoints, giftCard, getEpisodeMilestones } = require('../controllers/adminController');
 
 router.use(protect, requireAdmin);
 
@@ -10,5 +10,6 @@ router.patch('/settings', updateSettings);
 router.get('/users/:userId/points', getUserPoints);
 router.post('/users/:userId/points', setUserPoints);
 router.post('/gift-card', giftCard);
+router.get('/episode-milestones', getEpisodeMilestones);
 
 module.exports = router;

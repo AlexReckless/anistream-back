@@ -2,6 +2,8 @@
 const Settings = require('../models/Settings');
 const UserProgress = require('../models/UserProgress');
 const Transaction = require('../models/Transaction');
+const Card = require('../models/Card');
+const User = require('../models/User');
 
 // @desc    Ver configuracion global (puntos por capitulo, etc)
 // @route   GET /api/admin/settings
@@ -84,4 +86,39 @@ const setUserPoints = async (req, res) => {
   }
 };
 
-module.exports = { getSettings, updateSettings, getUserPoints, setUserPoints };
+// @desc    Regalar una carta del catálogo de apiWaifu directamente a un usuario
+// @route   POST /api/admin/gift-card
+// @access  Private (admin)
+const giftCard = async (req, res) => {
+  try {
+    const { userId, characterId, characterName, image, anime, rarity, favorites, synopsis, source } = req.body;
+
+    if (!userId || !characterId || !characterName || !rarity) {
+      return res.status(400).json({ success: false, message: 'userId, characterId, characterName y rarity son requeridos' });
+    }
+
+    const user = await User.findById(userId).select('_id');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    const card = await Card.create({
+      ownerId: userId,
+      characterId,
+      characterName,
+      image,
+      anime,
+      rarity,
+      favorites,
+      synopsis,
+      source: source || 'apiWaifu',
+      isOriginal: false
+    });
+
+    res.status(201).json({ success: true, data: card });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { getSettings, updateSettings, getUserPoints, setUserPoints, giftCard };

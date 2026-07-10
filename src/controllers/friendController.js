@@ -6,12 +6,13 @@ const UserProgress = require('../models/UserProgress');
 exports.searchUsers = async (req, res) => {
   try {
     const { name } = req.query;
-    const users = await User.find({ 
+    const users = await User.find({
       $or: [
         { name: { $regex: name, $options: 'i' } },
         { user: { $regex: name, $options: 'i' } }
       ],
-      _id: { $ne: req.user.id } // No encontrarse a sí mismo
+      _id: { $ne: req.user.id }, // No encontrarse a sí mismo
+      isAdmin: { $ne: true } // El admin nunca aparece en busquedas de usuarios normales
     }).select('name user').limit(10);
     res.json({ success: true, data: users });
   } catch (error) {
@@ -114,14 +115,21 @@ exports.getPendingRequests = async (req, res) => {
 // Obtener amigos y sus rachas (Streaks)
 exports.getFriendsWithStreaks = async (req, res) => {
   try {
-    const friendships = await Friendship.find({
-      $or: [{ requester: req.user.id }, { recipient: req.user.id }],
-      status: 'accepted'
-    }).populate('requester recipient', 'name user');
+    let friends;
 
-    const friends = friendships.map(f => 
-      f.requester._id.toString() === req.user.id ? f.recipient : f.requester
-    );
+    if (req.user.isAdmin) {
+      // El admin "es amigo" de todos automaticamente, sin filas de Friendship reales.
+      friends = await User.find({ _id: { $ne: req.user.id } }).select('name user');
+    } else {
+      const friendships = await Friendship.find({
+        $or: [{ requester: req.user.id }, { recipient: req.user.id }],
+        status: 'accepted'
+      }).populate('requester recipient', 'name user isAdmin');
+
+      friends = friendships
+        .map(f => (f.requester._id.toString() === req.user.id ? f.recipient : f.requester))
+        .filter(friend => !friend.isAdmin); // el admin queda invisible para usuarios normales
+    }
 
     const friendsData = await Promise.all(friends.map(async (friend) => {
       const progress = await UserProgress.findOne({ userId: friend._id });

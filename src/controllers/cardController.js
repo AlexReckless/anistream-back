@@ -69,15 +69,17 @@ exports.getFriendCards = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Usa /api/cards/mine para tu propia colección' });
     }
 
-    const friendship = await Friendship.findOne({
-      status: 'accepted',
-      $or: [
-        { requester: req.user.id, recipient: friendId },
-        { requester: friendId, recipient: req.user.id }
-      ]
-    });
-    if (!friendship) {
-      return res.status(403).json({ success: false, message: 'Solo puedes ver las cartas de tus amigos' });
+    if (!req.user.isAdmin) {
+      const friendship = await Friendship.findOne({
+        status: 'accepted',
+        $or: [
+          { requester: req.user.id, recipient: friendId },
+          { requester: friendId, recipient: req.user.id }
+        ]
+      });
+      if (!friendship) {
+        return res.status(403).json({ success: false, message: 'Solo puedes ver las cartas de tus amigos' });
+      }
     }
 
     const friend = await User.findById(friendId).select('name user avatarBase64');
@@ -87,11 +89,13 @@ exports.getFriendCards = async (req, res) => {
 
     await ensureCardsMigrated(friendId);
 
-    const cards = await Card.find({
-      ownerId: friendId,
-      isOriginal: { $ne: true },
-      rarity: { $ne: 'OR' }
-    }).sort({ obtainedAt: -1 });
+    // El admin ve TODO, incluidas las cartas OR/Original -- para poder
+    // clonar una a su propia coleccion y despues subirla a apiWaifu.
+    const cardFilter = req.user.isAdmin
+      ? { ownerId: friendId }
+      : { ownerId: friendId, isOriginal: { $ne: true }, rarity: { $ne: 'OR' } };
+
+    const cards = await Card.find(cardFilter).sort({ obtainedAt: -1 });
 
     res.json({
       success: true,
@@ -101,6 +105,36 @@ exports.getFriendCards = async (req, res) => {
         cards
       }
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Clonar cualquier carta (de cualquier dueño) a la coleccion del admin
+// @route   POST /api/cards/:cardId/clone
+// @access  Private (admin)
+exports.cloneCard = async (req, res) => {
+  try {
+    const { cardId } = req.params;
+    const source = await Card.findById(cardId);
+    if (!source) {
+      return res.status(404).json({ success: false, message: 'Carta no encontrada' });
+    }
+
+    const clone = await Card.create({
+      ownerId: req.user.id,
+      characterId: source.characterId,
+      characterName: source.characterName,
+      image: source.image,
+      anime: source.anime,
+      rarity: source.rarity,
+      favorites: source.favorites,
+      synopsis: source.synopsis,
+      source: source.source,
+      isOriginal: source.isOriginal
+    });
+
+    res.status(201).json({ success: true, data: clone });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

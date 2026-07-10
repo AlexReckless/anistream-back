@@ -300,7 +300,7 @@ const getUserProfileById = async (req, res) => {
   try {
     const { userId } = req.params;
 
-    if (userId !== req.user.id) {
+    if (userId !== req.user.id && !req.user.isAdmin) {
       const friendship = await Friendship.findOne({
         status: 'accepted',
         $or: [

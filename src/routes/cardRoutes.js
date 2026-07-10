@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware');
-const { getMyCards, getFriendCards } = require('../controllers/cardController');
+const { protect, requireAdmin } = require('../middleware/authMiddleware');
+const { getMyCards, getFriendCards, cloneCard } = require('../controllers/cardController');
 
 router.use(protect);
 
 router.get('/mine', getMyCards);
 router.get('/friend/:friendId', getFriendCards);
+router.post('/:cardId/clone', requireAdmin, cloneCard);
 
 module.exports = router;

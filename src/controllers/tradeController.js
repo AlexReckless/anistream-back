@@ -17,6 +17,13 @@ function isOriginalCard(card) {
   return card.isOriginal || card.rarity === 'OR';
 }
 
+// source:'fallback' son personajes de muestra que el gacha regalaba antes
+// cuando apiWaifu no respondía (imágenes rotas, no corresponden a ningún
+// personaje real) -- no se pueden intercambiar.
+function isJunkFallbackCard(card) {
+  return card.source === 'fallback';
+}
+
 // @desc    Solicitar un intercambio: N cartas propias por 1 carta de un amigo
 // @route   POST /api/trades
 // @access  Private
@@ -41,6 +48,9 @@ exports.createTrade = async (req, res) => {
     if (isOriginalCard(requestedCard)) {
       return res.status(400).json({ success: false, message: 'Las cartas originales (OR) no se pueden intercambiar' });
     }
+    if (isJunkFallbackCard(requestedCard)) {
+      return res.status(400).json({ success: false, message: 'Esa carta no se puede intercambiar' });
+    }
     if (requestedCard.locked) {
       return res.status(409).json({ success: false, message: 'Esa carta ya está en otro intercambio o combate' });
     }
@@ -55,6 +65,9 @@ exports.createTrade = async (req, res) => {
       }
       if (isOriginalCard(card)) {
         return res.status(400).json({ success: false, message: 'Las cartas originales (OR) no se pueden intercambiar' });
+      }
+      if (isJunkFallbackCard(card)) {
+        return res.status(400).json({ success: false, message: 'Una de tus cartas ofrecidas no se puede intercambiar' });
       }
       if (card.locked) {
         return res.status(409).json({ success: false, message: 'Una de tus cartas ofrecidas ya está en otro intercambio o combate' });

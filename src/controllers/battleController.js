@@ -7,7 +7,11 @@ function rollD20() {
 }
 
 function tradeableCardFilter(ownerId) {
-  return { ownerId, locked: false, isOriginal: { $ne: true }, rarity: { $ne: 'OR' } };
+  // source:'fallback' son personajes de muestra que el gacha regalaba antes
+  // cuando apiWaifu no respondía (imágenes rotas, no corresponden a ningún
+  // personaje real) -- ya no se generan, pero las que quedaron en
+  // colecciones viejas no deben poder disputarse ni intercambiarse.
+  return { ownerId, locked: false, isOriginal: { $ne: true }, rarity: { $ne: 'OR' }, source: { $ne: 'fallback' } };
 }
 
 async function areFriends(userA, userB) {
@@ -44,6 +48,9 @@ exports.createBattle = async (req, res) => {
     }
     if (card.isOriginal || card.rarity === 'OR') {
       return res.status(400).json({ success: false, message: 'Las cartas originales (OR) no se pueden disputar' });
+    }
+    if (card.source === 'fallback') {
+      return res.status(400).json({ success: false, message: 'Esa carta no se puede disputar' });
     }
     if (card.locked) {
       return res.status(409).json({ success: false, message: 'Esa carta ya está en otro intercambio o combate' });
@@ -201,6 +208,9 @@ exports.applyPenalty = async (req, res) => {
     }
     if (card.isOriginal || card.rarity === 'OR') {
       return res.status(400).json({ success: false, message: 'Las cartas originales (OR) no se pueden disputar' });
+    }
+    if (card.source === 'fallback') {
+      return res.status(400).json({ success: false, message: 'Esa carta no se puede disputar' });
     }
     if (card.locked) {
       return res.status(409).json({ success: false, message: 'Esa carta ya está en otro intercambio o combate' });

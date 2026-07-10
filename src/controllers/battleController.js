@@ -6,6 +6,10 @@ function rollD20() {
   return Math.floor(Math.random() * 20) + 1;
 }
 
+function tradeableCardFilter(ownerId) {
+  return { ownerId, locked: false, isOriginal: { $ne: true }, rarity: { $ne: 'OR' } };
+}
+
 async function areFriends(userA, userB) {
   const friendship = await Friendship.findOne({
     status: 'accepted',
@@ -66,7 +70,10 @@ exports.createBattle = async (req, res) => {
 // @route   GET /api/battles/incoming
 exports.getIncomingBattles = async (req, res) => {
   try {
-    const battles = await Battle.find({ opponent: req.user.id, status: 'pending' })
+    // Incluye 'pending_penalty' para que un combate donde ya tiraste el dado
+    // y ganaste, pero todavía no elegiste la carta de penalización, no quede
+    // perdido si cerraste la app antes de elegir.
+    const battles = await Battle.find({ opponent: req.user.id, status: { $in: ['pending', 'pending_penalty'] } })
       .populate('challenger', 'name user avatarBase64')
       .populate('card')
       .sort({ createdAt: -1 });
@@ -117,11 +124,96 @@ exports.rollBattle = async (req, res) => {
     battle.challengerRoll = challengerRoll;
     battle.opponentRoll = opponentRoll;
     battle.winner = winner;
+
+    if (winner.toString() === battle.challenger.toString()) {
+      // El retador gana: se queda con la carta por la que retó, como siempre.
+      await Card.findByIdAndUpdate(battle.card, { ownerId: winner, locked: false });
+      battle.status = 'completed';
+      battle.resolvedAt = new Date();
+    } else {
+      // El retador pierde: la carta en disputa se queda donde estaba (con el
+      // retado), pero ahora el retador arriesga una carta propia. El retado
+      // elige cual con un paso aparte (getPenaltyOptions / applyPenalty).
+      await Card.findByIdAndUpdate(battle.card, { locked: false });
+
+      const hasPenaltyCards = await Card.exists(tradeableCardFilter(battle.challenger));
+      if (hasPenaltyCards) {
+        battle.status = 'pending_penalty';
+      } else {
+        // El retador no tiene ninguna carta disponible para perder -- se
+        // resuelve sin penalización en vez de dejarlo bloqueado para siempre.
+        battle.status = 'completed';
+        battle.resolvedAt = new Date();
+      }
+    }
+
+    await battle.save();
+
+    res.json({ success: true, data: battle });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Cartas del retador entre las que el retado puede elegir la penalización
+// @route   GET /api/battles/:id/penalty-options
+// @access  Private (solo el retado, y solo si el combate quedo 'pending_penalty')
+exports.getPenaltyOptions = async (req, res) => {
+  try {
+    const battle = await Battle.findById(req.params.id);
+    if (!battle) return res.status(404).json({ success: false, message: 'Combate no encontrado' });
+    if (battle.opponent.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para ver esto' });
+    }
+    if (battle.status !== 'pending_penalty') {
+      return res.status(400).json({ success: false, message: 'Este combate no está esperando una penalización' });
+    }
+
+    const cards = await Card.find(tradeableCardFilter(battle.challenger)).sort({ obtainedAt: -1 });
+    res.json({ success: true, data: cards });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    El retado elige la carta del retador que se lleva como penalización
+// @route   PATCH /api/battles/:id/penalty
+// @access  Private (solo el retado, y solo si el combate quedo 'pending_penalty')
+exports.applyPenalty = async (req, res) => {
+  try {
+    const { cardId } = req.body;
+    if (!cardId) {
+      return res.status(400).json({ success: false, message: 'cardId es requerido' });
+    }
+
+    const battle = await Battle.findById(req.params.id);
+    if (!battle) return res.status(404).json({ success: false, message: 'Combate no encontrado' });
+    if (battle.opponent.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'No tienes permiso para hacer esto' });
+    }
+    if (battle.status !== 'pending_penalty') {
+      return res.status(400).json({ success: false, message: 'Este combate no está esperando una penalización' });
+    }
+
+    const card = await Card.findById(cardId);
+    if (!card || card.ownerId.toString() !== battle.challenger.toString()) {
+      return res.status(404).json({ success: false, message: 'Esa carta no pertenece al retador' });
+    }
+    if (card.isOriginal || card.rarity === 'OR') {
+      return res.status(400).json({ success: false, message: 'Las cartas originales (OR) no se pueden disputar' });
+    }
+    if (card.locked) {
+      return res.status(409).json({ success: false, message: 'Esa carta ya está en otro intercambio o combate' });
+    }
+
+    card.ownerId = battle.opponent;
+    card.locked = false;
+    await card.save();
+
+    battle.penaltyCard = cardId;
     battle.status = 'completed';
     battle.resolvedAt = new Date();
     await battle.save();
-
-    await Card.findByIdAndUpdate(battle.card, { ownerId: winner, locked: false });
 
     res.json({ success: true, data: battle });
   } catch (error) {

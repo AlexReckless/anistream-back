@@ -8,10 +8,15 @@ const battleSchema = new mongoose.Schema({
   opponentRoll: Number,
   status: {
     type: String,
-    enum: ['pending', 'completed'],
+    // 'pending_penalty': el retador perdió y el retado debe elegir, de la
+    // coleccion del retador, la carta que se lleva como penalización.
+    enum: ['pending', 'pending_penalty', 'completed'],
     default: 'pending'
   },
   winner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  // Carta que pierde el retador cuando pierde el combate (distinta de
+  // "card", que es la carta del retado por la que se combatió).
+  penaltyCard: { type: mongoose.Schema.Types.ObjectId, ref: 'Card' },
   createdAt: { type: Date, default: Date.now },
   resolvedAt: Date
 });

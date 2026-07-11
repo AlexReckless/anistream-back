@@ -158,7 +158,7 @@ exports.giftOwnCard = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Carta no encontrada' });
     }
     if (card.ownerId.toString() !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Solo podés regalar cartas de tu propia colección' });
+      return res.status(403).json({ success: false, message: 'Solo puedes regalar cartas de tu propia colección' });
     }
 
     const target = await User.findById(userId).select('_id');

@@ -132,7 +132,13 @@ exports.getFriendsWithStreaks = async (req, res) => {
     }
 
     const friendsData = await Promise.all(friends.map(async (friend) => {
-      const progress = await UserProgress.findOne({ userId: friend._id });
+      // Solo watchedEpisodes -- sin esto, cargaba el documento COMPLETO de
+      // cada usuario, incluido characterCollection (el Map legado con
+      // imagenes en base64 de cada personaje). Para el admin "friends" es
+      // TODA la base de usuarios, asi que esto cargaba en memoria, a la vez,
+      // las imagenes de la coleccion entera de cada usuario del sistema --
+      // la causa mas probable del "memory limit exceeded" de Render.
+      const progress = await UserProgress.findOne({ userId: friend._id }).select('watchedEpisodes');
       const streak = calculateStreak(progress?.watchedEpisodes || []);
       return {
         id: friend._id,

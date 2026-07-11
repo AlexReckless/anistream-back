@@ -5,7 +5,21 @@ const sortSlots = (slots) => [...slots].sort((a, b) => a.order - b.order);
 const getBanner = async (req, res) => {
   try {
     const banner = await HomeBanner.getOrCreate();
-    res.json({ success: true, slots: sortSlots(banner.slots) });
+    res.json({ success: true, slots: sortSlots(banner.slots), updatedAt: banner.updatedAt });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Chequeo liviano (sin slots/imagenes) para que el cliente sepa si su copia
+// en caché sigue al día -- el banner cambia como mucho una o dos veces por
+// mes, así que no tiene sentido volver a traer las imágenes completas cada
+// vez que se abre Home. Solo cuando esta fecha no coincide con la cacheada
+// vale la pena pedir /api/banner entero.
+const getBannerVersion = async (req, res) => {
+  try {
+    const banner = await HomeBanner.getOrCreate();
+    res.json({ success: true, updatedAt: banner.updatedAt });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -30,7 +44,7 @@ const upsertSlot = async (req, res) => {
     else banner.slots.push(slot);
 
     await banner.save();
-    res.json({ success: true, slots: sortSlots(banner.slots) });
+    res.json({ success: true, slots: sortSlots(banner.slots), updatedAt: banner.updatedAt });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -42,10 +56,10 @@ const deleteSlot = async (req, res) => {
     const banner = await HomeBanner.getOrCreate();
     banner.slots = banner.slots.filter((s) => s.order !== order);
     await banner.save();
-    res.json({ success: true, slots: sortSlots(banner.slots) });
+    res.json({ success: true, slots: sortSlots(banner.slots), updatedAt: banner.updatedAt });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-module.exports = { getBanner, upsertSlot, deleteSlot };
+module.exports = { getBanner, getBannerVersion, upsertSlot, deleteSlot };

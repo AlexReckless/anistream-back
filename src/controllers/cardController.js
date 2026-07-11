@@ -95,14 +95,28 @@ exports.getFriendCards = async (req, res) => {
       ? { ownerId: friendId }
       : { ownerId: friendId, isOriginal: { $ne: true }, rarity: { $ne: 'OR' } };
 
-    const cards = await Card.find(cardFilter).sort({ obtainedAt: -1 });
+    // Paginado: cada carta trae su imagen completa en base64, asi que traer
+    // la coleccion entera de un usuario de una sola vez (sobre todo para el
+    // admin, que puede estar entrando al perfil de cualquiera) es lo que mas
+    // peso le agrega a cada request. page/limit son opcionales para no
+    // romper si algo mas llega a pedir esto sin paginar.
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 24));
+
+    const cardCount = await Card.countDocuments(cardFilter);
+    const cards = await Card.find(cardFilter)
+      .sort({ obtainedAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
 
     res.json({
       success: true,
       data: {
         friend: { id: friend._id, name: friend.name, user: friend.user, avatarBase64: friend.avatarBase64 },
-        cardCount: cards.length,
-        cards
+        cardCount,
+        cards,
+        page,
+        hasMore: page * limit < cardCount
       }
     });
   } catch (error) {

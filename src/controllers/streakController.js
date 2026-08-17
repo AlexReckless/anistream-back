@@ -166,7 +166,7 @@ exports.getMyStreaks = async (req, res) => {
     }).populate('users', 'name user').sort({ startedAt: -1 });
 
     const data = streaks.map(s => {
-      const friend = s.users.find(u => u._id.toString() !== req.user.id);
+      const friend = s.users.find(u => u && u._id.toString() !== req.user.id);
       return {
         id: s._id,
         animeId: s.animeId,
@@ -202,7 +202,7 @@ exports.getCompletedStreaks = async (req, res) => {
     }).populate('users', 'name user').sort({ completedAt: -1 }).limit(20);
 
     const data = streaks.map(s => {
-      const friend = s.users.find(u => u._id.toString() !== req.user.id);
+      const friend = s.users.find(u => u && u._id.toString() !== req.user.id);
       return {
         id: s._id,
         animeId: s.animeId,

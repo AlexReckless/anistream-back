@@ -127,6 +127,7 @@ exports.getFriendsWithStreaks = async (req, res) => {
       }).populate('requester recipient', 'name user isAdmin');
 
       friends = friendships
+        .filter(f => f.requester && f.recipient) // referencia colgante (usuario borrado)
         .map(f => (f.requester._id.toString() === req.user.id ? f.recipient : f.requester))
         .filter(friend => !friend.isAdmin); // el admin queda invisible para usuarios normales
     }

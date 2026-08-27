@@ -4,7 +4,12 @@ const axios = require('axios');
 
 const FREETHAI_API_KEY = process.env.FREETHAI_API_KEY || 'sta_d9f88fd83679b5f6f3e22160c00a60c96d8eadc4e91f6359';
 const FREETHAI_BASE = 'https://api.freetheai.xyz/v1';
-const MODEL = 'opc/deepseek-v4-flash-free';
+// FreeTheAI rota los modelos "free" disponibles sin aviso -- "deepseek-v4-
+// flash-free" (el que había antes) dejó de existir ("unknown aliased
+// model", verificado en vivo contra /v1/chat/completions). Confirmado en
+// vivo que este SÍ responde bien en personaje con el mismo max_tokens que
+// ya se usaba.
+const MODEL = 'opc/mimo-v2.5-free';
 
 // ── Construir el system prompt del personaje ─────────────
 function buildSystemPrompt(chat) {

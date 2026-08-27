@@ -248,6 +248,43 @@ const sendMessage = async (req, res) => {
   }
 };
 
+// ─── POST /api/chat/save-exchange — guardar un intercambio ya resuelto ──
+// Para cuando la respuesta de la IA NO se generó acá (ej. la app le pega
+// directo a un Ollama local del usuario, en su misma red, en vez de pasar
+// por Render -- ver ChatContext.jsx/ollamaApi.js). Este endpoint solo
+// persiste los dos mensajes en Mongo, igual que hace sendMessage al final,
+// sin llamar a ningún proveedor de IA.
+const saveExchange = async (req, res) => {
+  try {
+    const { characterId, userMessage, assistantContent } = req.body;
+    if (!characterId || !userMessage || !assistantContent) {
+      return res.status(400).json({ success: false, message: 'characterId, userMessage y assistantContent son requeridos' });
+    }
+
+    const chat = await CharacterChat.findOne({ userId: req.user.id, characterId });
+    if (!chat) {
+      return res.status(404).json({ success: false, message: 'Personaje no encontrado. Inicia el chat primero.' });
+    }
+
+    chat.messages.push({ role: 'user', content: userMessage });
+    chat.messages.push({ role: 'assistant', content: assistantContent });
+    chat.lastChatAt = new Date();
+    await chat.save();
+
+    const userMsgDoc = chat.messages[chat.messages.length - 2];
+    const aiMsgDoc = chat.messages[chat.messages.length - 1];
+
+    res.json({
+      success: true,
+      userMessageId: userMsgDoc._id,
+      messageId: aiMsgDoc._id,
+      messageCount: chat.messages.length,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // ─── POST /api/chat/save — guardar conversación ──────────
 const saveConversation = async (req, res) => {
   try {
@@ -435,6 +472,7 @@ module.exports = {
   getConversation,
   initChat,
   sendMessage,
+  saveExchange,
   saveConversation,
   clearConversation,
   updateCharacterImage,

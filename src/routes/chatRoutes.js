@@ -7,6 +7,7 @@ const {
   getConversation,
   initChat,
   sendMessage,
+  saveExchange,
   saveConversation,
   clearConversation,
   updateCharacterImage,
@@ -23,6 +24,7 @@ router.get('/list',                   listChats);
 router.get('/conversation/:characterId', getConversation);
 router.post('/init',                  initChat);
 router.post('/message',               sendMessage);
+router.post('/save-exchange',         saveExchange);
 router.post('/save',                  saveConversation);
 router.delete('/clear/:characterId',  clearConversation);
 router.patch('/update-image',         updateCharacterImage);
